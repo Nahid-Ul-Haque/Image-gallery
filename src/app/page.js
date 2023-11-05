@@ -1,113 +1,199 @@
-import Image from 'next/image'
+"use client";
+import React, { useState } from "react";
+import { Inter } from "next/font/google";
+import Image from "next/image";
+import images from "../../data/images";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
+  const [selectThumbnails, setSelectThumbnails] = useState([]);
+  const [thumbnails, setThumbnails] = useState(images);
+  const [dragging, setDragging] = useState(false);
+  const [draggedImage, setDraggedImage] = useState(null);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+
+  // Handle new images
+  const handleFileChange = (e) => {
+    const selectedFiles = e.target.files;
+
+    const newImages = Array.from(selectedFiles).map((file, index) => {
+      const id = thumbnails.length + index + 1;
+      const thumbnail = URL.createObjectURL(file);
+
+      return { id, thumbnail };
+    });
+
+    setThumbnails([...thumbnails, ...newImages]);
+  };
+
+  // Handle delete images
+  const handleDeleteClick = () => {
+    const updatedImages = thumbnails.filter(
+      (image) => !selectThumbnails.some((selected) => selected.id === image.id)
+    );
+
+    setThumbnails(updatedImages);
+    setSelectThumbnails([]);
+  };
+
+  // Handle drag start
+  const handleDragStart = (image) => {
+    setDragging(true);
+    setDraggedImage(image);
+  };
+
+  // Handle drag over
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e?.target?.children[0]?.alt && setDraggedIndex(e?.target?.children[0]?.alt);
+  };
+
+  // Handle drop image
+  const handleDrop = (targetIndex) => {
+    setDragging(false);
+
+    if (draggedImage) {
+      const updatedImages = thumbnails.filter(
+        (image) => image.id !== draggedImage.id
+      );
+      updatedImages.splice(targetIndex, 0, draggedImage);
+
+      setThumbnails(updatedImages);
+      setDraggedImage(null);
+    }
+  };
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main
+      className={`min-h-screen w-screen flex flex-row items-center justify-center md:p-0 p-4 ${inter.className}`}
+    >
+      <section className="lg:w-1/2 md:w-3/4 w-full bg-white rounded-lg shadow">
+        <div className="flex flex-col gap-y-2">
+          <nav className="py-4 px-6">
+            <article className="flex flex-row justify-between items-center">
+              <h1 className="text-2xl font-bold">
+                {selectThumbnails.length === 0 ? (
+                  "Gallery"
+                ) : (
+                  <label
+                    htmlFor="select"
+                    className="flex flex-row justify-between items-center gap-x-4"
+                  >
+                    <input
+                      type="checkbox"
+                      name="select"
+                      id="select"
+                      checked={selectThumbnails.length > 0}
+                      className="h-5 w-5 accent-blue-500 cursor-pointer"
+                      onChange={() => setSelectThumbnails([])}
+                    />
+                    {selectThumbnails.length} Files Selected
+                  </label>
+                )}
+              </h1>
+              <button
+                className="text-red-500 font-medium"
+                onClick={handleDeleteClick}
+              >
+                Delete files
+              </button>
+            </article>
+          </nav>
+          <hr />
+          <section className="h-full w-full p-6">
+            <div
+              className="grid lg:grid-cols-5 md:grid-cols-3 grid-cols-1 gap-6"
+              onDragOver={handleDragOver}
+            >
+              {thumbnails.map((image, index) => (
+                <div
+                  key={index}
+                  className={
+                    "group relative before:content-[''] before:absolute before:h-full before:w-full before:rounded-lg before:transition-colors before:cursor-move" +
+                    (index === 0
+                      ? " md:col-span-2 md:row-span-2"
+                      : " col-span-1") +
+                    (selectThumbnails.find((photo) => photo.id === image.id)
+                      ? " opacity-100"
+                      : " hover:before:bg-black/50")
+                  }
+                  draggable={true}
+                  onDragStart={() => handleDragStart(image)}
+                  onDrop={() => handleDrop(index)}
+                >
+                  <Image
+                    src={image.thumbnail}
+                    alt={image.id}
+                    height={index === 0 ? 390 : 184}
+                    width={index === 0 ? 390 : 184}
+                    className={
+                      "h-full w-full max-w-full rounded-lg object-contain border-2" +
+                      " " +
+                      (selectThumbnails.find(
+                        (photo) => photo.id === image.id
+                      ) && "opacity-70")
+                    }
+                  />
+                  <input
+                    type="checkbox"
+                    name={image.id}
+                    id={image.id}
+                    className={
+                      "absolute top-4 left-4 h-5 w-5 accent-blue-500 group-hover:opacity-100 transition-opacity delay-100 duration-100 ease-linear cursor-pointer" +
+                      " " +
+                      (selectThumbnails.find((photo) => photo.id === image.id)
+                        ? "opacity-100"
+                        : "opacity-0")
+                    }
+                    checked={
+                      selectThumbnails.find((photo) => photo.id === image.id)
+                        ? true
+                        : false
+                    }
+                    onChange={() => {
+                      if (
+                        selectThumbnails.find((photo) => photo.id === image.id)
+                      )
+                        setSelectThumbnails(
+                          selectThumbnails.filter(
+                            (photo) => photo.id !== image.id
+                          )
+                        );
+                      else setSelectThumbnails([...selectThumbnails, image]);
+                    }}
+                  />
+                  {dragging && Number(draggedIndex) === Number(image.id) && (
+                    <div className="absolute top-0 left-0 h-full w-full flex justify-center items-center bg-white border-2 border-dashed rounded-lg">
+                      Drop Here
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="relative border-2 border-dashed rounded-lg p-4 hover:bg-gray-50 transition-colors ease-linear">
+                <input
+                  type="file"
+                  multiple
+                  name="images"
+                  id="images"
+                  className="absolute top-0 left-0 h-full w-full opacity-0 cursor-pointer"
+                  title="Try to upload photos..."
+                  onChange={handleFileChange}
+                />
+                <div className="h-full w-full flex flex-col justify-center items-center gap-y-4">
+                  <Image
+                    src="/placeholder.png"
+                    alt="placeholder"
+                    height={20}
+                    width={20}
+                    priority
+                  />
+                  <span className="whitespace-nowrap">Add Images</span>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+      </section>
     </main>
-  )
+  );
 }
